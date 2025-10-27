@@ -38,3 +38,4 @@ Database (optional): MongoDB
 Authentication: JWT / Session Cookies
 Styling: Tailwind CSS or Bootstrap
 Version Control: Git & GitHub
+
