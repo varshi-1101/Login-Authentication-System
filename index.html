@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login Auth System — Single File Demo</title>
+  <style>
+    /* Simple responsive styling */
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#4f46e5; --muted:#9aa4b2; --success:#16a34a; --danger:#ef4444;
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;background:linear-gradient(180deg,#071129 0%, #07162a 100%);color:#e6eef6;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+    .wrap{width:100%;max-width:980px;display:grid;grid-template-columns:1fr 420px;gap:28px;}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:22px;border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);}
+    h1{margin:0 0 8px;font-size:20px;}
+    p.lead{margin:0 0 12px;color:var(--muted);font-size:13px;}
+    label{display:block;font-size:13px;margin:8px 0 6px;color:#d7e3f2;}
+    input,button,select,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;font-size:14px;outline:none;}
+    .small{font-size:12px;color:var(--muted);}
+    button{cursor:pointer;background:linear-gradient(90deg,var(--accent),#2f3ae1);color:white;border:none;padding:10px 12px;font-weight:600;box-shadow:0 6px 16px rgba(79,70,229,0.14);}
+    .muted{color:var(--muted);}
+    .row{display:flex;gap:10px;}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);box-shadow:none;}
+    .center{display:flex;align-items:center;justify-content:center;}
+    .flex{display:flex;align-items:center;gap:8px;}
+    .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .notice{padding:10px;border-radius:8px;margin:8px 0;font-size:13px;}
+    .notice.success{background:rgba(22,163,74,0.12);color:var(--success);border:1px solid rgba(22,163,74,0.12);}
+    .notice.warn{background:rgba(245,158,11,0.08);color:#f59e0b;border:1px solid rgba(245,158,11,0.08);}
+    .notice.error{background:rgba(239,68,68,0.08);color:var(--danger);border:1px solid rgba(239,68,68,0.08);}
+    .user-card{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;margin:8px 0;background:rgba(255,255,255,0.01);}
+    pre.small{white-space:pre-wrap;word-break:break-word;background:rgba(255,255,255,0.02);padding:8px;border-radius:6px;overflow:auto;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media (max-width:980px){.wrap{grid-template-columns:1fr;}.panel{padding:16px;} .grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Left: UI + flows -->
+    <div class="panel" id="mainPanel">
+      <h1>Login Authentication System — Demo</h1>
+      <p class="lead">Single-file demo that simulates secure registration, login, logout, password reset (OTP), account lockout, and a simple admin view. Not for production — see notes below.</p>
+
+      <!-- Authentication views are swapped via JS -->
+      <div id="alerts"></div>
+
+      <div id="view-login">
+        <label>Email</label>
+        <input id="login-email" placeholder="you@example.com" />
+        <label>Password</label>
+        <input id="login-password" type="password" placeholder="••••••••" />
+        <div class="row" style="margin-top:12px">
+          <button id="btnLogin">Login</button>
+          <button class="btn-ghost" id="btnToRegister">Register</button>
+        </div>
+        <div class="links">
+          <button class="btn-ghost" id="btnToForgot">Forgot Password</button>
+        </div>
+        <div style="margin-top:12px" class="small muted">Tip: Admin account seeded: <strong>admin@demo.com</strong> / password 'Admin@1234' (use to open admin panel)</div>
+      </div>
+
+      <div id="view-register" style="display:none">
+        <label>Full Name</label>
+        <input id="reg-name" placeholder="Your full name" />
+        <label>Email</label>
+        <input id="reg-email" placeholder="you@example.com" />
+        <label>Password</label>
+        <input id="reg-password" type="password" placeholder="Min 8 chars, incl. uppercase, number" />
+        <label>Confirm Password</label>
+        <input id="reg-password2" type="password" placeholder="Confirm password" />
+        <div class="row" style="margin-top:12px">
+          <button id="btnRegister">Create account</button>
+          <button class="btn-ghost" id="btnToLoginA">Back to Login</button>
+        </div>
+      </div>
+
+      <div id="view-forgot" style="display:none">
+        <label>Enter your registered email</label>
+        <input id="forgot-email" placeholder="you@example.com" />
+        <div class="row" style="margin-top:12px">
+          <button id="btnSendOtp">Send OTP</button>
+          <button class="btn-ghost" id="btnToLoginB">Back</button>
+        </div>
+
+        <div id="otp-block" style="display:none;margin-top:12px">
+          <label>Enter OTP (shown in UI/console for demo)</label>
+          <input id="forgot-otp" placeholder="123456" />
+          <label>New password</label>
+          <input id="forgot-newpwd" type="password" placeholder="New password" />
+          <div class="row" style="margin-top:12px">
+            <button id="btnResetPwd">Reset Password</button>
+            <button class="btn-ghost" id="btnCancelOtp">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-dashboard" style="display:none">
+        <div class="flex">
+          <div>
+            <h2 id="dash-welcome" style="margin:0"></h2>
+            <div class="small muted" id="dash-email"></div>
+          </div>
+          <div style="margin-left:auto">
+            <button id="btnLogout" class="btn-ghost">Logout</button>
+          </div>
+        </div>
+
+        <div style="margin-top:16px" id="user-controls"></div>
+
+        <h3 style="margin-top:18px">Session Info</h3>
+        <pre class="small" id="sessionInfo"></pre>
+      </div>
+    </div>
+
+    <!-- Right: Admin / logs / utilities -->
+    <div class="panel" id="rightPanel">
+      <h1>Admin & Tools</h1>
+      <p class="lead">Quick tools to inspect local "DB", audit logs, and control seeded admin.</p>
+
+      <div style="margin-top:6px" class="row">
+        <button id="seedAdmin" class="btn-ghost">Seed Admin (if missing)</button>
+        <button id="wipeAll" class="btn-ghost">Wipe All (localStorage)</button>
+      </div>
+
+      <h3 style="margin-top:12px">Users</h3>
+      <div id="usersList"></div>
+
+      <h3 style="margin-top:12px">Audit Log</h3>
+      <div id="auditLog" style="max-height:250px;overflow:auto"></div>
+
+      <h3 style="margin-top:12px">Notes</h3>
+      <div class="small muted">
+        This demo stores everything in your browser <strong>localStorage</strong>. For production, move all logic to a backend, and never store secrets client-side.
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Single-file demo auth system (client-side).
+  - Uses Web Crypto (PBKDF2) to hash passwords with per-user salt.
+  - Stores user records in localStorage under key 'demo_users'.
+  - Implements OTP for "forgot password" (simulated).
+  - Implements simple JWT-like session tokens (not real JWTs).
+  - Admin account seeded: admin@demo.com / Admin@1234
+  - Intended for learning/demo only — not production.
+*/
+
+/* ---------- Utilities ---------- */
+
+// Base64 helpers
+const buf2b64 = (b)=> btoa(String.fromCharCode(...new Uint8Array(b)));
+const b642buf = (s)=> Uint8Array.from(atob(s), c=>c.charCodeAt(0));
+
+// Random bytes
+async function randBytes(len=16){
+  const b = new Uint8Array(len);
+  crypto.getRandomValues(b);
+  return b;
+}
+
+// PBKDF2 derive (password string, salt Uint8Array, iterations, length)
+async function deriveKey(password, salt, iterations=150000, len=32){
+  // encode password
+  const enc = new TextEncoder().encode(password);
+  const key = await crypto.subtle.importKey('raw', enc, {name:'PBKDF2'}, false, ['deriveBits']);
+  const derived = await crypto.subtle.deriveBits({
+    name: 'PBKDF2',
+    salt: salt,
+    iterations: iterations,
+    hash: 'SHA-256'
+  }, key, len*8);
+  return new Uint8Array(derived);
+}
+
+// Sleep helper
+const wait = ms => new Promise(res=>setTimeout(res,ms));
+
+/* ---------- Demo DB (localStorage) ---------- */
+const DB_KEY = 'demo_users_v1';
+const AUDIT_KEY = 'demo_audit_v1';
+function loadUsers(){ try{ const raw=localStorage.getItem(DB_KEY); return raw? JSON.parse(raw): {}; }catch(e){return {}} }
+function saveUsers(u){ localStorage.setItem(DB_KEY, JSON.stringify(u)); }
+function loadAudit(){ try{ const raw=localStorage.getItem(AUDIT_KEY); return raw? JSON.parse(raw): []; }catch(e){return []} }
+function saveAudit(a){ localStorage.setItem(AUDIT_KEY, JSON.stringify(a)); }
+function logAudit(event){
+  const a = loadAudit();
+  a.unshift({ts:new Date().toISOString(), ...event});
+  saveAudit(a);
+  renderAudit();
+}
+
+/* ---------- Auth logic ---------- */
+
+const config = {
+  pbkdf2Iterations: 150000,   // PBKDF2 iterations (browser demo; server should use >100k)
+  saltBytes: 16,
+  keyLen: 32,
+  minPasswordLength: 8,
+  lockoutThreshold: 5,        // failed attempts before lock
+  lockoutMinutes: 10,         // lock duration
+  otpTTLMinutes: 15,
+  sessionTTLMinutes: 60*24   // 24 hours
+};
+
+// Create user object and save
+async function createUser({name, email, password, role='user', disabled=false}){
+  const users = loadUsers();
+  const key = email.toLowerCase();
+  if(users[key]) throw new Error('email_exists');
+  // create salt and derive
+  const salt = await randBytes(config.saltBytes);
+  const derived = await deriveKey(password, salt, config.pbkdf2Iterations, config.keyLen);
+  const user = {
+    id: 'u_'+Math.random().toString(36).slice(2,9),
+    name, email: key,
+    passwordHash: buf2b64(derived),
+    saltB64: buf2b64(salt),
+    iterations: config.pbkdf2Iterations,
+    role,
+    createdAt: new Date().toISOString(),
+    failedAttempts: 0,
+    lockUntil: null,
+    disabled: !!disabled,
+    loginHistory: [],
+    otp: null, // {code, expiresAt}
+  };
+  users[key] = user;
+  saveUsers(users);
+  logAudit({type:'user.created', email:key, by:'system'});
+  return user;
+}
+
+// Verify password
+async function verifyPassword(user, password){
+  const salt = b642buf(user.saltB64);
+  const derived = await deriveKey(password, salt, user.iterations, config.keyLen);
+  return buf2b64(derived) === user.passwordHash;
+}
+
+// Generate session token (simple)
+function makeSession(email){
+  const expires = Date.now() + config.sessionTTLMinutes*60*1000;
+  const payload = {email, iat: Date.now(), exp: expires};
+  // Not a real JWT (no signature) — for demo only
+  const token = btoa(JSON.stringify(payload));
+  return {token, payload};
+}
+
+function getSession(){
+  const s = localStorage.getItem('demo_session');
+  if(!s) return null;
+  try{
+    const p = JSON.parse(atob(s));
+    if(p.exp < Date.now()) { localStorage.removeItem('demo_session'); return null; }
+    return p;
+  }catch(e){ return null; }
+}
+function setSession(tokenPayload){
+  localStorage.setItem('demo_session', btoa(JSON.stringify(tokenPayload)));
+}
+function clearSession(){ localStorage.removeItem('demo_session'); }
+
+/* ---------- Flows: register, login, forgot, reset ---------- */
+
+async function registerFlow(){
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pwd = document.getElementById('reg-password').value;
+  const pwd2 = document.getElementById('reg-password2').value;
+
+  clearAlerts();
+  // Basic validation
+  if(!name || !email || !pwd || !pwd2){ showAlert('Please fill all fields','error'); return; }
+  if(!validateEmail(email)){ showAlert('Invalid email format','error'); return; }
+  if(pwd !== pwd2){ showAlert('Passwords do not match','error'); return; }
+  if(!validatePasswordStrength(pwd)){ showAlert('Password too weak — minimum 8 chars, include uppercase and number','error'); return; }
+  const users = loadUsers();
+  if(users[email]){ showAlert('An account with this email already exists','error'); return; }
+
+  showAlert('Creating account…','warn');
+  try{
+    await createUser({name, email, password:pwd, role:'user'});
+    showAlert('Account created — you can now login','success');
+    await wait(800);
+    toLogin();
+    renderUsers();
+  }catch(e){
+    console.error(e);
+    showAlert('Registration failed','error');
+  }
+}
+
+async function loginFlow(){
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pwd = document.getElementById('login-password').value;
+  clearAlerts();
+  if(!email || !pwd){ showAlert('Enter email and password','error'); return; }
+  const users = loadUsers();
+  const user = users[email];
+  if(!user){ showAlert('Invalid credentials','error'); logAudit({type:'login.failed', email, reason:'no_user'}); return; }
+  if(user.disabled){ showAlert('Account disabled. Contact admin.','error'); logAudit({type:'login.failed', email, reason:'disabled'}); return; }
+  // check lock
+  if(user.lockUntil && new Date(user.lockUntil) > new Date()){
+    const mins = Math.ceil((new Date(user.lockUntil) - new Date())/60000);
+    showAlert('Account locked due to failed attempts. Try again in '+mins+' min','error'); return;
+  }
+  // verify
+  const ok = await verifyPassword(user, pwd);
+  if(!ok){
+    user.failedAttempts = (user.failedAttempts||0) + 1;
+    if(user.failedAttempts >= config.lockoutThreshold){
+      user.lockUntil = new Date(Date.now() + config.lockoutMinutes*60*1000).toISOString();
+      logAudit({type:'account.locked', email, reason:'failed_attempts'});
+      showAlert('Account locked due to too many failed attempts','error');
+    } else {
+      showAlert('Invalid credentials','error');
+      logAudit({type:'login.failed', email, reason:'invalid_password'});
+    }
+    users[email] = user; saveUsers(users); renderUsers(); return;
+  }
+  // success
+  user.failedAttempts = 0; user.lockUntil = null;
+  user.loginHistory = user.loginHistory || [];
+  user.loginHistory.unshift({at:new Date().toISOString(), ip:'127.0.0.1'});
+  users[email] = user; saveUsers(users);
+  const {payload} = makeSession(email);
+  setSession(payload);
+  logAudit({type:'login.success', email});
+  showAlert('Login successful','success');
+  await wait(400);
+  showDashboardFor(user);
+  renderUsers();
+}
+
+function logoutFlow(){
+  const s = getSession();
+  if(s) logAudit({type:'logout', email:s.email});
+  clearSession();
+  showAlert('Logged out','success');
+  toLogin();
+}
+
+/* ---------- Forgot/OTP/Reset ---------- */
+
+function sendOtpFlow(){
+  const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+  clearAlerts();
+  if(!validateEmail(email)){ showAlert('Enter a valid email','error'); return; }
+  const users = loadUsers();
+  const user = users[email];
+  if(!user){ showAlert('If account exists, an OTP has been sent (demo)','success'); return; } // don't reveal
+  // generate OTP
+  const otp = (Math.floor(100000 + Math.random()*900000)).toString();
+  const expiresAt = Date.now() + config.otpTTLMinutes*60*1000;
+  user.otp = {code:otp, expiresAt};
+  users[email] = user; saveUsers(users);
+  // For demo we show OTP — in real app you'd email it!
+  showAlert('OTP sent (for demo it is shown below and in console)','success');
+  document.getElementById('otp-block').style.display='block';
+  console.log('Demo OTP for', email, otp);
+  // render visible demo OTP
+  renderDemoOtp(email);
+  logAudit({type:'otp.issued', email});
+}
+
+async function resetPwdFlow(){
+  const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+  const otp = document.getElementById('forgot-otp').value.trim();
+  const newpwd = document.getElementById('forgot-newpwd').value;
+  clearAlerts();
+  if(!email || !otp || !newpwd){ showAlert('Fill all fields','error'); return; }
+  if(!validatePasswordStrength(newpwd)){ showAlert('Password too weak','error'); return; }
+  const users = loadUsers(); const user = users[email];
+  if(!user || !user.otp){ showAlert('Invalid OTP or expired','error'); logAudit({type:'reset.failed', email, reason:'no_user_or_otp'}); return; }
+  if(Date.now() > user.otp.expiresAt){ showAlert('OTP expired','error'); user.otp = null; users[email]=user; saveUsers(users); renderUsers(); return; }
+  if(user.otp.code !== otp){ showAlert('Invalid OTP','error'); logAudit({type:'reset.failed', email, reason:'invalid_otp'}); return; }
+  // all good -> update password
+  const salt = await randBytes(config.saltBytes);
+  const derived = await deriveKey(newpwd, salt, config.pbkdf2Iterations, config.keyLen);
+  user.saltB64 = buf2b64(salt);
+  user.passwordHash = buf2b64(derived);
+  user.iterations = config.pbkdf2Iterations;
+  user.otp = null; user.failedAttempts = 0; user.lockUntil = null;
+  users[email]=user; saveUsers(users);
+  showAlert('Password reset successful — you can login now','success');
+  logAudit({type:'reset.success', email});
+  await wait(800);
+  toLogin();
+  renderUsers();
+}
+
+/* ---------- Rendering helpers ---------- */
+
+function showAlert(msg,type='') {
+  const a = document.getElementById('alerts'); a.innerHTML = '';
+  const div = document.createElement('div'); div.className='notice '+(type||'');
+  div.textContent = msg;
+  a.appendChild(div);
+  setTimeout(()=>{ if(a.contains(div)) a.removeChild(div); }, 8000);
+}
+function clearAlerts(){ document.getElementById('alerts').innerHTML=''; }
+
+function renderUsers(){
+  const users = loadUsers();
+  const cont = document.getElementById('usersList'); cont.innerHTML='';
+  const keys = Object.keys(users).sort((a,b)=> users[b].createdAt.localeCompare(users[a].createdAt));
+  if(!keys.length){ cont.innerHTML='<div class="small muted">No users</div>'; return; }
+  for(const k of keys){
+    const u = users[k];
+    const div = document.createElement('div'); div.className='user-card';
+    const left = document.createElement('div');
+    left.innerHTML = `<div><strong>${u.name||'(no-name)'}</strong> <span class="small muted">(${u.role})</span></div><div class="small muted">${u.email}</div>`;
+    const right = document.createElement('div');
+    const btnDisable = document.createElement('button'); btnDisable.className='btn-ghost small';
+    btnDisable.textContent = u.disabled ? 'Enable' : 'Disable';
+    btnDisable.onclick = ()=>{ u.disabled = !u.disabled; saveUsers({...loadUsers(), [u.email]:u}); renderUsers(); logAudit({type:'admin.toggle', email:u.email, disabled:u.disabled}); };
+    const btnWipe = document.createElement('button'); btnWipe.className='btn-ghost small';
+    btnWipe.textContent='Remove';
+    btnWipe.onclick = ()=>{ const all=loadUsers(); delete all[u.email]; saveUsers(all); renderUsers(); logAudit({type:'admin.deleted', email:u.email}); };
+    right.appendChild(btnDisable); right.appendChild(btnWipe);
+    div.appendChild(left); div.appendChild(right);
+    cont.appendChild(div);
+  }
+}
+
+function renderAudit(){
+  const a = loadAudit();
+  const cont = document.getElementById('auditLog'); cont.innerHTML='';
+  if(!a.length){ cont.innerHTML='<div class="small muted">No logs</div>'; return; }
+  for(const row of a.slice(0,200)){
+    const el = document.createElement('div'); el.className='small muted';
+    el.style.padding='6px'; el.style.borderBottom='1px dashed rgba(255,255,255,0.02)';
+    el.textContent = `[${row.ts}] ${row.type} ${row.email?(' — '+row.email):''} ${row.reason?(' — '+row.reason):''}`;
+    cont.appendChild(el);
+  }
+}
+
+function renderDemoOtp(email){
+  const users = loadUsers(); const user = users[email];
+  if(!user || !user.otp) return;
+  const otpBox = document.getElementById('otp-block');
+  const small = document.createElement('div'); small.className='small'; small.style.marginTop='8px';
+  small.innerHTML = `<div class="muted small">Demo OTP for <strong>${email}</strong>: <code>${user.otp.code}</code> (expires ${(new Date(user.otp.expiresAt)).toLocaleString()})</div>`;
+  otpBox.appendChild(small);
+}
+
+/* ---------- UI routing ---------- */
+
+function toLogin(){ hideAllViews(); document.getElementById('view-login').style.display='block'; }
+function toRegister(){ hideAllViews(); document.getElementById('view-register').style.display='block'; }
+function toForgot(){ hideAllViews(); document.getElementById('view-forgot').style.display='block'; document.getElementById('otp-block').style.display='none'; document.getElementById('forgot-otp').value=''; document.getElementById('forgot-newpwd').value=''; }
+function hideAllViews(){ ['view-login','view-register','view-forgot','view-dashboard'].forEach(id=>document.getElementById(id).style.display='none'); clearAlerts(); }
+function showDashboardFor(user){
+  hideAllViews(); document.getElementById('view-dashboard').style.display='block';
+  document.getElementById('dash-welcome').textContent = `Welcome, ${user.name || user.email}`;
+  document.getElementById('dash-email').textContent = user.email + (user.role==='admin' ? ' — Admin' : '');
+  // user controls
+  const uc = document.getElementById('user-controls'); uc.innerHTML='';
+  if(user.role==='admin'){
+    const b1 = document.createElement('button'); b1.textContent='Open Admin Panel (Users)'; b1.onclick=()=>{ document.getElementById('rightPanel').scrollIntoView(); };
+    uc.appendChild(b1);
+    // show audit quick stats
+    const stats = loadAudit().slice(0,50).reduce((acc,r)=>{ acc[r.type]=(acc[r.type]||0)+1; return acc; },{});
+    const pre = document.createElement('pre'); pre.className='small'; pre.textContent = 'Recent audit events counts:\\n' + JSON.stringify(stats, null, 2);
+    uc.appendChild(pre);
+  } else {
+    const pre = document.createElement('pre'); pre.className='small'; pre.textContent = 'Login history:\\n' + JSON.stringify(user.loginHistory?.slice(0,8) || [], null, 2);
+    uc.appendChild(pre);
+  }
+  // session info
+  const s = getSession();
+  document.getElementById('sessionInfo').textContent = JSON.stringify(s, null, 2);
+}
+
+/* ---------- Helpers/validation ---------- */
+function validateEmail(e){ return /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(e); }
+function validatePasswordStrength(p){
+  if(!p || p.length < config.minPasswordLength) return false;
+  if(!/[A-Z]/.test(p)) return false;
+  if(!/[0-9]/.test(p)) return false;
+  return true;
+}
+
+/* ---------- Seed admin & setup ---------- */
+
+async function seedAdminIfMissing(){
+  const users = loadUsers();
+  if(users['admin@demo.com']) return;
+  try{
+    await createUser({name:'Administrator', email:'admin@demo.com', password:'Admin@1234', role:'admin', disabled:false});
+    showAlert('Admin created: admin@demo.com / Admin@1234','success');
+  }catch(e){ console.error(e); }
+  renderUsers();
+}
+
+function wipeAll(){
+  if(!confirm('Wipe all demo data in localStorage? This cannot be undone.')) return;
+  localStorage.removeItem(DB_KEY); localStorage.removeItem(AUDIT_KEY); localStorage.removeItem('demo_session');
+  renderUsers(); renderAudit(); showAlert('Wiped all','success');
+}
+
+/* ---------- Event wiring ---------- */
+
+document.getElementById('btnToRegister').onclick = ()=> toRegister();
+document.getElementById('btnToLoginA').onclick = ()=> toLogin();
+document.getElementById('btnToLoginB').onclick = ()=> toLogin();
+document.getElementById('btnToForgot').onclick = ()=> toForgot();
+
+document.getElementById('btnRegister').onclick = ()=> registerFlow();
+document.getElementById('btnLogin').onclick = ()=> loginFlow();
+document.getElementById('btnLogout').onclick = ()=> logoutFlow();
+
+document.getElementById('btnSendOtp').onclick = ()=> sendOtpFlow();
+document.getElementById('btnResetPwd').onclick = ()=> resetPwdFlow();
+document.getElementById('btnCancelOtp').onclick = ()=> toLogin();
+
+document.getElementById('seedAdmin').onclick = ()=> seedAdminIfMissing();
+document.getElementById('wipeAll').onclick = ()=> wipeAll();
+
+/* make Enter key submit in forms */
+['login-password','login-email'].forEach(id => {
+  document.getElementById(id).addEventListener('keypress', (e)=>{ if(e.key==='Enter') loginFlow(); });
+});
+['reg-password2','reg-password','reg-email','reg-name'].forEach(id => {
+  document.getElementById(id).addEventListener('keypress', (e)=>{ if(e.key==='Enter') registerFlow(); });
+});
+document.getElementById('forgot-newpwd').addEventListener('keypress',(e)=>{ if(e.key==='Enter') resetPwdFlow(); });
+
+/* ---------- init ---------- */
+
+(async function init(){
+  // Ensure there is an admin for demo
+  await seedAdminIfMissing();
+  renderUsers(); renderAudit();
+  // If a session exists, show dashboard
+  const s = getSession();
+  if(s){
+    const users = loadUsers(); const user = users[s.email];
+    if(user) { showDashboardFor(user); } else { toLogin(); }
+  } else {
+    toLogin();
+  }
+})();
+
+</script>
+
+</body>
+</html>
